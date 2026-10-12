@@ -22,13 +22,16 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import com.skydoves.pokedex.compose.core.data.sync.Sync
 import com.skydoves.pokedex.compose.ui.PokedexMain
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collect
@@ -58,8 +61,17 @@ class MainActivity : ComponentActivity() {
     splashScreen.setKeepOnScreenCondition { uiState.shouldKeepSplashScreen() }
 
     setContent {
+      val selectedRegion by viewModel.selectedRegion.collectAsStateWithLifecycle()
+
+      // Trigger sync whenever the region changes
+      LaunchedEffect(selectedRegion) {
+        Sync.initialize(context = this@MainActivity, region = selectedRegion)
+      }
+
       PokedexMain(
         darkTheme = (uiState.shouldUseDarkTheme(isSystemDarkTheme = isSystemInDarkTheme())),
+        selectedRegion = selectedRegion,
+        onRegionSelected = { viewModel.updateRegion(it) }
       )
     }
   }

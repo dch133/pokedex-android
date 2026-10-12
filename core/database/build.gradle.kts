@@ -50,8 +50,12 @@ dependencies {
   // database
   implementation(libs.androidx.room.runtime)
   implementation(libs.androidx.room.ktx)
+  implementation(libs.androidx.room.paging)
   ksp(libs.androidx.room.compiler)
   testImplementation(libs.androidx.arch.core.testing)
+
+  // paging
+  api(libs.androidx.paging.runtime)
 
   // json parsing
   implementation(libs.kotlinx.serialization.json)

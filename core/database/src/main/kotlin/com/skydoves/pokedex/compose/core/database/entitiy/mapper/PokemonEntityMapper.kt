@@ -24,6 +24,7 @@ object PokemonEntityMapper : EntityMapper<List<Pokemon>, List<PokemonEntity>> {
   override fun asEntity(domain: List<Pokemon>): List<PokemonEntity> {
     return domain.map { pokemon ->
       PokemonEntity(
+        id = pokemon.id,
         page = pokemon.page,
         name = pokemon.name,
         url = pokemon.url,
@@ -40,6 +41,14 @@ object PokemonEntityMapper : EntityMapper<List<Pokemon>, List<PokemonEntity>> {
       )
     }
   }
+
+  fun asDomain(entity: PokemonEntity): Pokemon {
+    return Pokemon(
+      page = entity.page,
+      nameField = entity.name,
+      url = entity.url,
+    )
+  }
 }
 
 fun List<Pokemon>.asEntity(): List<PokemonEntity> {
@@ -48,4 +57,8 @@ fun List<Pokemon>.asEntity(): List<PokemonEntity> {
 
 fun List<PokemonEntity>?.asDomain(): List<Pokemon> {
   return PokemonEntityMapper.asDomain(this.orEmpty())
+}
+
+fun PokemonEntity.asDomain(): Pokemon {
+  return PokemonEntityMapper.asDomain(this)
 }

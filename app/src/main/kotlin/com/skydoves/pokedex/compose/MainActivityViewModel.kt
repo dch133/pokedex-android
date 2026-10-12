@@ -20,10 +20,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.skydoves.pokedex.compose.MainActivityUiState.Loading
 import com.skydoves.pokedex.compose.core.data.repository.userdata.UserDataRepository
+import com.skydoves.pokedex.compose.core.model.PokemonRegion
 import com.skydoves.pokedex.compose.core.model.UiTheme
 import com.skydoves.pokedex.compose.core.model.UserData
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
@@ -40,6 +44,13 @@ class MainActivityViewModel @Inject constructor(
       started = SharingStarted.WhileSubscribed(5_000),
       initialValue = Loading,
     )
+
+  private val _selectedRegion = MutableStateFlow(PokemonRegion.KANTO)
+  val selectedRegion: StateFlow<PokemonRegion> = _selectedRegion.asStateFlow()
+
+  fun updateRegion(region: PokemonRegion) {
+    _selectedRegion.value = region
+  }
 }
 
 sealed interface MainActivityUiState {

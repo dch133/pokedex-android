@@ -19,14 +19,18 @@ package com.skydoves.pokedex.compose.feature.home
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.paging.PagingData
+import androidx.paging.cachedIn
 import com.skydoves.pokedex.compose.core.data.repository.home.HomeRepository
 import com.skydoves.pokedex.compose.core.model.Pokemon
+import com.skydoves.pokedex.compose.core.model.PokemonRegion
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
 @HiltViewModel
@@ -34,29 +38,23 @@ class HomeViewModel @Inject constructor(
   private val homeRepository: HomeRepository,
 ) : ViewModel() {
 
-  internal val uiState: StateFlow<HomeUiState>
-    field = MutableStateFlow<HomeUiState>(HomeUiState.Loading)
-  private var isLastPageReached = false
+  internal val uiState = MutableStateFlow<HomeUiState>(HomeUiState.Idle)
 
-  private val pokemonFetchingIndex: MutableStateFlow<Int> = MutableStateFlow(0)
-  val pokemonList: StateFlow<List<Pokemon>> = pokemonFetchingIndex.flatMapLatest { page ->
+  private val _regionState = MutableStateFlow(PokemonRegion.KANTO)
+  val regionState: StateFlow<PokemonRegion> = _regionState.asStateFlow()
+
+  @OptIn(ExperimentalCoroutinesApi::class)
+  val pokemonPagingData: Flow<PagingData<Pokemon>> = _regionState.flatMapLatest { region ->
     homeRepository.fetchPokemonList(
-      page = page,
-      onStart = { uiState.tryEmit(HomeUiState.Loading) },
+      region = region,
+      onStart = { },
       onComplete = { uiState.tryEmit(HomeUiState.Idle) },
-      onLastPageReached = { isLastPageReached = true },
       onError = { uiState.tryEmit(HomeUiState.Error(it)) },
     )
-  }.stateIn(
-    scope = viewModelScope,
-    started = SharingStarted.WhileSubscribed(5_000),
-    initialValue = emptyList(),
-  )
+  }.cachedIn(viewModelScope)
 
-  fun fetchNextPokemonList() {
-    if (uiState.value != HomeUiState.Loading && !isLastPageReached) {
-      pokemonFetchingIndex.value++
-    }
+  fun fetchByRegion(region: PokemonRegion) {
+    _regionState.value = region
   }
 }
 

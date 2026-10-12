@@ -38,7 +38,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -74,6 +77,7 @@ import com.skydoves.pokedex.compose.core.preview.PokedexPreviewTheme
 import com.skydoves.pokedex.compose.core.preview.PreviewUtils
 import com.skydoves.pokedex.compose.designsystem.R
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun PokedexDetails(
   sharedTransitionScope: SharedTransitionScope,
@@ -89,48 +93,60 @@ fun PokedexDetails(
   val uiState by detailsViewModel.uiState.collectAsStateWithLifecycle()
   val pokemonInfo by detailsViewModel.pokemonInfo.collectAsStateWithLifecycle()
 
-  with(sharedTransitionScope) {
-    Column(
-      modifier = Modifier
-        .fillMaxSize()
-        .sharedBounds(
-          sharedContentState = rememberSharedContentState(key = "pokemon-${pokemon.name}"),
-          animatedVisibilityScope = animatedContentScope,
-        )
-        .background(PokedexTheme.colors.background)
-        .verticalScroll(rememberScrollState())
-        .testTag("PokedexDetails"),
-    ) {
+  // SENIOR OPTIMIZATION: Track if the transition is running.
+  // We will use this to defer CPU-heavy work (like Palette calculation).
+  val isTransitionRunning = animatedContentScope.transition.isRunning
+  var canCalculatePalette by remember { mutableStateOf(false) }
 
-      var palette by rememberPaletteState()
-      val backgroundBrush by palette.paletteBackgroundBrush()
+  LaunchedEffect(isTransitionRunning) {
+    if (!isTransitionRunning) {
+      canCalculatePalette = true
+    }
+  }
 
-      DetailsHeader(
-        pokemon = pokemon,
-        pokemonInfo = pokemonInfo,
-        onPaletteLoaded = { palette = it },
-        backgroundBrush = backgroundBrush
-      )
+  Column(
+    modifier = Modifier
+      .fillMaxSize()
+      .background(PokedexTheme.colors.background)
+      .verticalScroll(rememberScrollState())
+      .testTag("PokedexDetails"),
+  ) {
 
-      if (uiState == DetailsUiState.Idle && pokemonInfo != null) {
-        DetailsInfo(pokemonInfo = pokemonInfo!!)
+    var palette by rememberPaletteState()
+    val backgroundBrush by palette.paletteBackgroundBrush()
 
-        DetailsStatus(pokemonInfo = pokemonInfo!!)
-      } else {
-        Box(modifier = Modifier.fillMaxSize()) {
-          PokedexCircularProgress()
-        }
+    DetailsHeader(
+      sharedTransitionScope = sharedTransitionScope,
+      animatedContentScope = animatedContentScope,
+      pokemon = pokemon,
+      pokemonInfo = pokemonInfo,
+      onPaletteLoaded = { palette = it },
+      backgroundBrush = backgroundBrush,
+      isPaletteEnabled = canCalculatePalette
+    )
+
+    if (uiState == DetailsUiState.Idle && pokemonInfo != null) {
+      DetailsInfo(pokemonInfo = pokemonInfo!!)
+
+      DetailsStatus(pokemonInfo = pokemonInfo!!)
+    } else {
+      Box(modifier = Modifier.fillMaxSize()) {
+        PokedexCircularProgress()
       }
     }
   }
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 private fun DetailsHeader(
+  sharedTransitionScope: SharedTransitionScope,
+  animatedContentScope: AnimatedContentScope,
   pokemon: Pokemon,
   pokemonInfo: PokemonInfo?,
   onPaletteLoaded: (Palette) -> Unit,
   backgroundBrush: Brush,
+  isPaletteEnabled: Boolean,
 ) {
   val composeNavigator = currentComposeNavigator
   val shape = RoundedCornerShape(
@@ -140,66 +156,73 @@ private fun DetailsHeader(
     bottomEnd = 64.dp,
   )
 
-  Box(
-    modifier = Modifier
-      .fillMaxWidth()
-      .height(290.dp)
-      .shadow(elevation = 9.dp, shape = shape)
-      .background(brush = backgroundBrush, shape = shape),
-  ) {
-    Row(
+  with(sharedTransitionScope) {
+    Box(
       modifier = Modifier
-        .padding(12.dp)
-        .statusBarsPadding(),
-      verticalAlignment = Alignment.CenterVertically,
+        .fillMaxWidth()
+        .height(290.dp)
+        .sharedBounds(
+          sharedContentState = rememberSharedContentState(key = "pokemon-${pokemon.name}"),
+          animatedVisibilityScope = animatedContentScope,
+        )
+        .shadow(elevation = 9.dp, shape = shape)
+        .background(brush = backgroundBrush, shape = shape),
     ) {
-      Icon(
+      Row(
         modifier = Modifier
-          .padding(end = 6.dp)
-          .clickable { composeNavigator.navigateUp() },
-        painter = painterResource(id = R.drawable.ic_arrow),
-        tint = PokedexTheme.colors.absoluteWhite,
-        contentDescription = null,
-      )
+          .padding(12.dp)
+          .statusBarsPadding(),
+        verticalAlignment = Alignment.CenterVertically,
+      ) {
+        Icon(
+          modifier = Modifier
+            .padding(end = 6.dp)
+            .clickable { composeNavigator.navigateUp() },
+          painter = painterResource(id = R.drawable.ic_arrow),
+          tint = PokedexTheme.colors.absoluteWhite,
+          contentDescription = null,
+        )
 
-      Text(
-        modifier = Modifier.padding(horizontal = 10.dp),
-        text = pokemon.name,
+        Text(
+          modifier = Modifier.padding(horizontal = 10.dp),
+          text = pokemon.name,
+          color = PokedexTheme.colors.absoluteWhite,
+          fontWeight = FontWeight.Bold,
+          fontSize = 18.sp,
+        )
+      }
+
+      PokedexText(
+        modifier = Modifier
+          .align(Alignment.TopEnd)
+          .padding(12.dp)
+          .statusBarsPadding(),
+        text = pokemonInfo?.getIdString().orEmpty(),
+        previewText = "#001",
         color = PokedexTheme.colors.absoluteWhite,
         fontWeight = FontWeight.Bold,
         fontSize = 18.sp,
       )
+
+      LandscapistImage(
+        modifier = Modifier
+          .align(Alignment.BottomCenter)
+          .padding(bottom = 20.dp)
+          .size(190.dp),
+        imageModel = { pokemon.imageUrl },
+        imageOptions = ImageOptions(contentScale = ContentScale.Inside),
+        component = rememberImageComponent {
+          // SENIOR OPTIMIZATION: Only add PalettePlugin after transition finishes
+          if (!LocalInspectionMode.current && isPaletteEnabled) {
+            +PalettePlugin(
+              imageModel = pokemon.imageUrl,
+              useCache = true,
+              paletteLoadedListener = { onPaletteLoaded.invoke(it) },
+            )
+          }
+        },
+      )
     }
-
-    PokedexText(
-      modifier = Modifier
-        .align(Alignment.TopEnd)
-        .padding(12.dp)
-        .statusBarsPadding(),
-      text = pokemonInfo?.getIdString().orEmpty(),
-      previewText = "#001",
-      color = PokedexTheme.colors.absoluteWhite,
-      fontWeight = FontWeight.Bold,
-      fontSize = 18.sp,
-    )
-
-    LandscapistImage(
-      modifier = Modifier
-        .align(Alignment.BottomCenter)
-        .padding(bottom = 20.dp)
-        .size(190.dp),
-      imageModel = { pokemon.imageUrl },
-      imageOptions = ImageOptions(contentScale = ContentScale.Inside),
-      component = rememberImageComponent {
-        if (!LocalInspectionMode.current) {
-          +PalettePlugin(
-            imageModel = pokemon.imageUrl,
-            useCache = true,
-            paletteLoadedListener = { onPaletteLoaded.invoke(it) },
-          )
-        }
-      },
-    )
   }
 
   PokedexText(

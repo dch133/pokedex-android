@@ -16,6 +16,7 @@
 
 package com.skydoves.pokedex.compose.core.database
 
+import androidx.paging.PagingSource
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
@@ -33,4 +34,10 @@ interface PokemonDao {
 
   @Query("SELECT * FROM PokemonEntity WHERE page <= :page_")
   suspend fun getAllPokemonList(page_: Int): List<PokemonEntity>
+
+  @Query("SELECT * FROM PokemonEntity WHERE id BETWEEN :minId AND :maxId ORDER BY id ASC")
+  fun getPokemonPagingSource(minId: Int, maxId: Int): PagingSource<Int, PokemonEntity>
+
+  @Query("DELETE FROM PokemonEntity")
+  suspend fun clearAll()
 }

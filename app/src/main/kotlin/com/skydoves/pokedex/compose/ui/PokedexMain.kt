@@ -17,14 +17,27 @@
 package com.skydoves.pokedex.compose.ui
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import com.skydoves.compose.stability.runtime.TraceRecomposition
 import com.skydoves.pokedex.compose.core.designsystem.theme.PokedexTheme
+import com.skydoves.pokedex.compose.core.model.LocalOnRegionSelected
+import com.skydoves.pokedex.compose.core.model.LocalSelectedRegion
+import com.skydoves.pokedex.compose.core.model.PokemonRegion
 import com.skydoves.pokedex.compose.navigation.PokedexNavHost
 
 @Composable
 @TraceRecomposition
-fun PokedexMain(darkTheme: Boolean) {
+fun PokedexMain(
+  darkTheme: Boolean,
+  selectedRegion: PokemonRegion = PokemonRegion.KANTO,
+  onRegionSelected: (PokemonRegion) -> Unit,
+) {
   PokedexTheme(darkTheme = darkTheme) {
-    PokedexNavHost()
+    CompositionLocalProvider(
+      LocalSelectedRegion provides selectedRegion,
+      LocalOnRegionSelected provides onRegionSelected,
+    ) {
+      PokedexNavHost()
+    }
   }
 }

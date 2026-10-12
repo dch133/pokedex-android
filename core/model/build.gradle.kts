@@ -27,6 +27,9 @@ android {
 }
 
 dependencies {
+  // compose
+  implementation(libs.androidx.compose.runtime)
+
   // compose stable marker
   compileOnly(libs.compose.stable.marker)
 

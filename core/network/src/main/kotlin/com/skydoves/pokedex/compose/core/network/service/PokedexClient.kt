@@ -25,10 +25,13 @@ class PokedexClient @Inject constructor(
   private val pokedexService: PokedexService,
 ) {
 
-  suspend fun fetchPokemonList(page: Int): ApiResponse<PokemonResponse> =
+  suspend fun fetchPokemonList(
+    limit: Int = PAGING_SIZE,
+    offset: Int = 0,
+  ): ApiResponse<PokemonResponse> =
     pokedexService.fetchPokemonList(
-      limit = PAGING_SIZE,
-      offset = page * PAGING_SIZE,
+      limit = limit,
+      offset = offset,
     )
 
   suspend fun fetchPokemonInfo(name: String): ApiResponse<PokemonInfo> =

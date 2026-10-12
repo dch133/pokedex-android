@@ -43,8 +43,7 @@ class DetailsViewModel @AssistedInject constructor(
     fun create(pokemon: Pokemon): DetailsViewModel
   }
 
-  internal val uiState: StateFlow<DetailsUiState>
-    field = MutableStateFlow<DetailsUiState>(DetailsUiState.Loading)
+  internal val uiState = MutableStateFlow<DetailsUiState>(DetailsUiState.Loading)
 
   val pokemonInfo: StateFlow<PokemonInfo?> = flow {
     detailsRepository.fetchPokemonInfo(

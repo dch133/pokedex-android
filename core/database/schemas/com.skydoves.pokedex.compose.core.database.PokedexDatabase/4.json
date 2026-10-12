@@ -2,12 +2,18 @@
   "formatVersion": 1,
   "database": {
     "version": 4,
-    "identityHash": "2ce2c0e046fdc408aab83eb7e475bf26",
+    "identityHash": "e9e03920a4e00fbe139a9489260be181",
     "entities": [
       {
         "tableName": "PokemonEntity",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`page` INTEGER NOT NULL, `name` TEXT NOT NULL, `url` TEXT NOT NULL, PRIMARY KEY(`name`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `page` INTEGER NOT NULL, `name` TEXT NOT NULL, `url` TEXT NOT NULL, PRIMARY KEY(`id`))",
         "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
           {
             "fieldPath": "page",
             "columnName": "page",
@@ -30,11 +36,9 @@
         "primaryKey": {
           "autoGenerate": false,
           "columnNames": [
-            "name"
+            "id"
           ]
-        },
-        "indices": [],
-        "foreignKeys": []
+        }
       },
       {
         "tableName": "PokemonInfoEntity",
@@ -94,15 +98,12 @@
           "columnNames": [
             "id"
           ]
-        },
-        "indices": [],
-        "foreignKeys": []
+        }
       }
     ],
-    "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '2ce2c0e046fdc408aab83eb7e475bf26')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'e9e03920a4e00fbe139a9489260be181')"
     ]
   }
 }

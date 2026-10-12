@@ -17,21 +17,26 @@
 package com.skydoves.pokedex.compose.core.data.repository.home
 
 import androidx.annotation.VisibleForTesting
-import androidx.annotation.WorkerThread
+import androidx.paging.ExperimentalPagingApi
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.PagingData
+import androidx.paging.map
+import androidx.room.withTransaction
+import androidx.tracing.trace
 import com.skydoves.pokedex.compose.core.common.network.Dispatcher
 import com.skydoves.pokedex.compose.core.common.network.PokedexAppDispatchers
-import com.skydoves.pokedex.compose.core.database.PokemonDao
+import com.skydoves.pokedex.compose.core.database.PokedexDatabase
 import com.skydoves.pokedex.compose.core.database.entitiy.mapper.asDomain
 import com.skydoves.pokedex.compose.core.database.entitiy.mapper.asEntity
 import com.skydoves.pokedex.compose.core.model.Pokemon
+import com.skydoves.pokedex.compose.core.model.PokemonRegion
 import com.skydoves.pokedex.compose.core.network.service.PokedexClient
-import com.skydoves.sandwich.ApiResponse
-import com.skydoves.sandwich.message
-import com.skydoves.sandwich.onFailure
 import com.skydoves.sandwich.suspendOnSuccess
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onStart
 import javax.inject.Inject
@@ -39,39 +44,59 @@ import javax.inject.Inject
 @VisibleForTesting
 class HomeRepositoryImpl @Inject constructor(
   private val pokedexClient: PokedexClient,
-  private val pokemonDao: PokemonDao,
+  private val pokedexDatabase: PokedexDatabase,
   @Dispatcher(PokedexAppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
 ) : HomeRepository {
 
-  @WorkerThread
+  @OptIn(ExperimentalPagingApi::class)
   override fun fetchPokemonList(
-    page: Int,
+    region: PokemonRegion,
     onStart: () -> Unit,
-    onComplete: () -> Unit,
-    onLastPageReached: () -> Unit,
+    onCompletion: () -> Unit,
     onError: (String?) -> Unit,
-  ) = flow {
-    var pokemons = pokemonDao.getPokemonList(page).asDomain()
-    if (pokemons.isEmpty()) {
-      /**
-       * fetches a list of [Pokemon] from the network and getting [ApiResponse] asynchronously.
-       * @see [suspendOnSuccess](https://github.com/skydoves/sandwich#apiresponse-extensions-for-coroutines)
-       */
-      val response = pokedexClient.fetchPokemonList(page = page)
-      response.suspendOnSuccess {
-        if (data.next == null) {
-          onLastPageReached()
-        }
-
-        pokemons = data.results
-        pokemons.forEach { pokemon -> pokemon.page = page }
-        pokemonDao.insertPokemonList(pokemons.asEntity())
-        emit(pokemonDao.getAllPokemonList(page).asDomain())
-      }.onFailure { // handles the all error cases from the API request fails.
-        onError(message())
+  ): Flow<PagingData<Pokemon>> {
+    return Pager(
+      config = PagingConfig(pageSize = 20, enablePlaceholders = false),
+      remoteMediator = PokemonRemoteMediator(
+        homeRepository = this,
+        region = region
+      ),
+      pagingSourceFactory = { 
+        pokedexDatabase.pokemonDao().getPokemonPagingSource(
+          minId = region.idRange.first,
+          maxId = region.idRange.last
+        ) 
       }
-    } else {
-      emit(pokemonDao.getAllPokemonList(page).asDomain())
+    ).flow
+      .map { pagingData ->
+        pagingData.map { it.asDomain() }
+      }
+      .onStart { onStart() }
+      .onCompletion { onCompletion() }
+      .flowOn(ioDispatcher)
+  }
+
+  override suspend fun syncRegion(region: PokemonRegion, page: Int): Boolean = trace("syncRegion") {
+    val regionStartOffset = region.idRange.first - 1
+    val currentOffset = regionStartOffset + (page * 20) // Use standard limit of 20
+
+    if (currentOffset >= region.idRange.last) return@trace true
+
+    val limit = minOf(20, region.idRange.last - currentOffset)
+    
+    val response = pokedexClient.fetchPokemonList(limit = limit, offset = currentOffset)
+    var success = false
+    
+    response.suspendOnSuccess {
+      val pokemons = data.results
+      pokemons.forEach { it.page = page }
+      
+      pokedexDatabase.withTransaction {
+        pokedexDatabase.pokemonDao().insertPokemonList(pokemons.asEntity())
+      }
+      success = true
     }
-  }.onStart { onStart() }.onCompletion { onComplete() }.flowOn(ioDispatcher)
+    
+    success
+  }
 }

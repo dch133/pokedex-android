@@ -21,7 +21,8 @@ import androidx.room.PrimaryKey
 
 @Entity
 data class PokemonEntity(
-  var page: Int = 0,
-  @PrimaryKey val name: String,
+  @PrimaryKey val id: Int,
+  val page: Int = 0,
+  val name: String,
   val url: String,
 )

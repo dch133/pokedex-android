@@ -26,20 +26,19 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalInspectionMode
@@ -81,26 +80,26 @@ fun PokedexProgressBar(
   ) {
     var textWidth by remember { mutableIntStateOf(0) }
     val threshold = 16
-    val isInner by remember(
-      progressWidth,
-      textWidth,
-    ) { mutableStateOf(progressWidth > (textWidth + threshold * 2)) }
+    val isInner = progressWidth > (textWidth + threshold * 2)
 
     val animation: Float by animateFloatAsState(
       targetValue = if (progressWidth == 0f) 0f else 1f,
-      // Configure the animation duration and easing.
       animationSpec = tween(durationMillis = 950, easing = LinearOutSlowInEasing),
-      label = "",
+      label = "ProgressBarAnimation",
     )
 
+    // SENIOR OPTIMIZATION:
+    // We use graphicsLayer to animate scaleX from the Start.
+    // This happens entirely in the GPU/Draw phase.
+    // Recomposition, Measurement, and Layout are SKIPPED during the animation.
     Box(
       modifier = Modifier
         .align(Alignment.CenterStart)
-        .width(
-          progressWidth
-            .toInt()
-            .pxToDp() * animation,
-        )
+        .fillMaxWidth(progress) // Fixed width layout
+        .graphicsLayer {
+            scaleX = animation
+            transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0.5f)
+        }
         .height(18.dp)
         .background(
           color = color,
@@ -152,29 +151,6 @@ private fun PokedexProgressBarPreview1() {
       PokedexProgressBar(
         modifier = Modifier.align(Alignment.Center),
         progress = 0.1f,
-        color = PokedexTheme.colors.primary,
-        label = "150/300",
-      )
-    }
-  }
-}
-
-@Preview
-@Preview(uiMode = Configuration.UI_MODE_NIGHT_YES)
-@Composable
-private fun PokedexProgressBarPreview2() {
-  PokedexTheme {
-    Box(
-      modifier = Modifier
-        .fillMaxWidth()
-        .height(120.dp)
-        .background(PokedexTheme.colors.background),
-    ) {
-      PokedexProgressBar(
-        modifier = Modifier
-          .fillMaxWidth()
-          .align(Alignment.Center),
-        progress = 0.5f,
         color = PokedexTheme.colors.primary,
         label = "150/300",
       )

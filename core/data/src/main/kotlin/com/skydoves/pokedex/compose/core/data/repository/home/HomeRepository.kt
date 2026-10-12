@@ -16,18 +16,19 @@
 
 package com.skydoves.pokedex.compose.core.data.repository.home
 
-import androidx.annotation.WorkerThread
+import androidx.paging.PagingData
 import com.skydoves.pokedex.compose.core.model.Pokemon
+import com.skydoves.pokedex.compose.core.model.PokemonRegion
 import kotlinx.coroutines.flow.Flow
 
 interface HomeRepository {
 
-  @WorkerThread
   fun fetchPokemonList(
-    page: Int,
+    region: PokemonRegion,
     onStart: () -> Unit,
     onComplete: () -> Unit,
-    onLastPageReached: () -> Unit,
     onError: (String?) -> Unit,
-  ): Flow<List<Pokemon>>
+  ): Flow<PagingData<Pokemon>>
+
+  suspend fun syncRegion(region: PokemonRegion, page: Int): Boolean
 }

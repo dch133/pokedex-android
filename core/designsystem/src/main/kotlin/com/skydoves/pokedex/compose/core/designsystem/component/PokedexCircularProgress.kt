@@ -23,13 +23,16 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.tooling.preview.Preview
 import com.skydoves.pokedex.compose.core.designsystem.theme.PokedexTheme
 
 @Composable
 fun BoxScope.PokedexCircularProgress() {
   CircularProgressIndicator(
-    modifier = Modifier.align(Alignment.Center),
+    modifier = Modifier
+      .align(Alignment.Center)
+      .testTag("PokedexCircularProgress"),
     color = PokedexTheme.colors.primary,
   )
 }

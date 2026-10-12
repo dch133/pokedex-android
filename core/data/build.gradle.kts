@@ -42,6 +42,23 @@ dependencies {
   // network
   implementation(libs.sandwich)
 
+  // paging
+  api(libs.androidx.paging.runtime)
+  api(libs.androidx.paging.common)
+
+  // database
+  implementation(libs.androidx.room.runtime)
+  implementation(libs.androidx.room.ktx)
+  implementation(libs.androidx.room.paging)
+
+  // work
+  implementation(libs.androidx.work.runtime)
+  implementation(libs.androidx.hilt.work)
+  ksp(libs.androidx.hilt.compiler)
+
+  // tracing
+  implementation(libs.androidx.tracing)
+
   // unit test
   testImplementation(libs.junit)
   testImplementation(libs.turbine)
